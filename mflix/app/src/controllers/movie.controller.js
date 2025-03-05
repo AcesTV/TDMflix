@@ -224,11 +224,5 @@ export default {
   getMoviesOnlyCastTotal,
   getMoviesHollywoodCount,
   getMoviesBetween2000And2010With8IMDBAnd10Awards,
-  get5BestMoviesWith4ActorsAnd15AwardsAndIMDBScore,
-  create,
-  findAll,
-  findOne,
-  update,
-  deleteMovie,
-  search
+  get5BestMoviesWith4ActorsAnd15AwardsAndIMDBScore
 };
