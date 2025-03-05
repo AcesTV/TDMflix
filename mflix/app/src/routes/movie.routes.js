@@ -24,11 +24,4 @@ router.get('/movies-hollywood-count', movieController.getMoviesHollywoodCount);
 router.get('/movies-between-2000-and-2010-with-8-imdb-and-10-awards', movieController.getMoviesBetween2000And2010With8IMDBAnd10Awards);
 router.get('/5-best-movies-with-4-actors-and-15-awards-and-imdb-score', movieController.get5BestMoviesWith4ActorsAnd15AwardsAndIMDBScore);
 
-router.post('/', movieController.create);
-router.get('/', movieController.findAll);
-router.get('/search', movieController.search);
-router.get('/:id', movieController.findOne);
-router.put('/:id', movieController.update);
-router.delete('/:id', movieController.deleteMovie);
-
 export default router;
