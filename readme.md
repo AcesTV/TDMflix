@@ -140,3 +140,124 @@ Nombre de films dont le nombre d'acteurs au casting est égal à 4: 22389
 ```javascript
 const movies = await Movie.find({ cast: { $size: 4 } }).countDocuments();
 ```
+
+## Etape 2
+
+### 2.13
+
+Affichez le nombre de contenus, le nombre total de récompenses, le nombre moyen de nominations et le nombre moyen de récompenses pour l'ensemble des contenus de la collection movies.
+
+```javascript
+const stats = await Movie.aggregate([
+  {
+    $group: {
+        _id: null,
+        totalContents: { $sum: 1 },
+        totalAwards: { $sum: "$awards.wins" },
+        averageNominations: { $avg: "$awards.nominations" },
+        averageAwards: { $avg: "$awards.wins" }
+    }
+  }
+]);
+```
+
+### 2.14
+
+Affichez le nombre d'acteurs au casting (castTotal) pour chaque contenu. En l'ajoutant en tant que champ supplémentaire dans la collection movies.
+
+```javascript
+const stats = await Movie.aggregate([{
+  "$addFields": {
+    "castTotal": { "$size": { "$ifNull": ["$cast", []] } }
+  }
+}]);
+```
+
+Affichez seulement le nombre d'acteurs au casting (castTotal) pour chaque contenu.
+
+```javascript
+const stats = await Movie.aggregate([{
+    "$project": {
+        "title": 1,
+        "castTotal": { "$size": { "$ifNull": ["$cast", []] } }
+    }
+  }]);
+```
+
+### 2.15
+
+Calculez le nombre de fois que le terme "Hollywood" apparaît dans le résumé des contenus (cf. attribut fullplot)
+
+```javascript
+const count = await Movie.aggregate([
+        {
+            "$group": {
+              "_id": null,
+              "hollywoodCount": {
+                "$sum": {
+                  "$size": {
+                    "$regexFindAll": { "input": "$fullplot", "regex": "Hollywood", "options": "i" }
+                  }
+                }
+              }
+            }
+          }          
+    ]);
+```
+
+### 2.16
+
+Trouvez les films sortis entre 2000 et 2010 qui ont une note IMDB supérieure à 8 et plus de 10 récompenses.
+
+```javascript
+const movies = await Movie.find({
+    year: { $gte: 2000, $lte: 2010 },
+    "imdb.rating": { $gt: 8 },
+    "awards.wins": { $gt: 10 }
+  });
+```
+
+### 2.17
+
+Proposez une nouvelle question complexe et fournissez la solution pour y répondre
+ainsi que la réponse
+
+#### Quels sont les 5 films les mieux notés sur IMDB, sortis après 1990, qui ont remporté au moins 15 récompenses et dont le casting contient au moins 4 acteurs ?
+
+Réponse:
+- Band of Brothers (2001, 9.6, 34 récompenses, 4 acteurs) 
+- The Shawshank Redemption (1994, 9.3, 23 récompenses, 4 acteurs)
+- The Shawshank Redemption (1994, 9.3, 23 récompenses, 4 acteurs)
+- The Dark Knight (2008, 9.0, 144 récompenses, 4 acteurs)
+- The Lord of the Rings: The Return of the King (2003, 8.9, 175 récompenses, 4 acteurs)
+
+```javascript
+const movies = await Movie.aggregate([
+        {
+          "$match": {
+            "year": { "$gte": 1990 },
+            "awards.wins": { "$gte": 15 },
+            "imdb.rating": { "$exists": true },
+            "$expr": { 
+              "$gte": [{ "$size": { "$ifNull": ["$cast", []] } }, 4]
+            }
+          }
+        },
+        {
+          "$project": {
+            "title": 1,
+            "year": 1,
+            "imdb.rating": 1,
+            "awards.wins": 1,
+            "castTotal": { "$size": { "$ifNull": ["$cast", []] } },
+            "_id": 0
+          }
+        },
+        {
+          "$sort": { "imdb.rating": -1 }
+        },
+        {
+          "$limit": 5
+        }
+      ])
+```

@@ -1,5 +1,7 @@
 import Movie from '../models/movie.model.js';
 
+// Etape 1
+
 async function countMovies(req, res) {
   const count = await Movie.countDocuments({ type: "movie" });
   res.json({ count });
@@ -98,10 +100,111 @@ async function getMoviesWith4Actors(req, res) {
   res.json({ movies });
 }
 
+// Etape 2
+
+// Affichez le nombre de contenus, le nombre total de récompenses, le nombre moyen de nominations et le nombre moyen de récompenses pour l'ensemble des contenus de la collection movies.
+
+async function getMoviesStats(req, res) {
+  const stats = await Movie.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalContents: { $sum: 1 },
+        totalAwards: { $sum: "$awards.wins" },
+        averageNominations: { $avg: "$awards.nominations" },
+        averageAwards: { $avg: "$awards.wins" }
+      }
+    }
+  ]);
+  res.json({ stats });
+}
 
 
+// Affichez le nombre d'acteurs au casting (castTotal) pour chaque contenu
+async function getMoviesCastTotal(req, res) {
+  const stats = await Movie.aggregate([{
+    "$addFields": {
+      "castTotal": { "$size": { "$ifNull": ["$cast", []] } }
+    }
+  }]);
+  res.json({ stats });
+}
 
+// Affichez seulement le nombre d'acteurs au casting (castTotal) pour chaque contenu.
+async function getMoviesOnlyCastTotal(req, res) {
+  const stats = await Movie.aggregate([{
+    "$project": {
+        "title": 1,
+        "castTotal": { "$size": { "$ifNull": ["$cast", []] } }
+    }
+  }]);
+  res.json({ stats });
+}
 
+// Calculez le nombre de fois que le terme "Hollywood" apparaît dans le résumé des contenus (cf. attribut fullplot)
+
+async function getMoviesHollywoodCount(req, res) {
+    const count = await Movie.aggregate([
+        {
+            "$group": {
+              "_id": null,
+              "hollywoodCount": {
+                "$sum": {
+                  "$size": {
+                    "$regexFindAll": { "input": "$fullplot", "regex": "Hollywood", "options": "i" }
+                  }
+                }
+              }
+            }
+          }          
+    ]);
+    res.json({ count });
+}
+
+// Trouvez les films sortis entre 2000 et 2010 qui ont une note IMDB supérieure à 8 et plus de 10 récompenses.
+
+async function getMoviesBetween2000And2010With8IMDBAnd10Awards(req, res) {
+  const movies = await Movie.find({
+    year: { $gte: 2000, $lte: 2010 },
+    "imdb.rating": { $gt: 8 },
+    "awards.wins": { $gt: 10 }
+  });
+  res.json({ count: movies.length, movies });
+}
+
+// Quels sont les 5 films les mieux notés sur IMDB, sortis après 1990, qui ont remporté au moins 15 récompenses et dont le casting contient au moins 4 acteurs ?
+
+async function get5BestMoviesWith4ActorsAnd15AwardsAndIMDBScore(req, res) {
+    const movies = await Movie.aggregate([
+        {
+          "$match": {
+            "year": { "$gte": 1990 },
+            "awards.wins": { "$gte": 15 },
+            "imdb.rating": { "$exists": true },
+            "$expr": { 
+              "$gte": [{ "$size": { "$ifNull": ["$cast", []] } }, 4]
+            }
+          }
+        },
+        {
+          "$project": {
+            "title": 1,
+            "year": 1,
+            "imdb.rating": 1,
+            "awards.wins": 1,
+            "castTotal": { "$size": { "$ifNull": ["$cast", []] } },
+            "_id": 0
+          }
+        },
+        {
+          "$sort": { "imdb.rating": -1 }
+        },
+        {
+          "$limit": 5
+        }
+      ])
+    res.json({ count: movies.length, movies });
+}
 
 async function create(req, res) {
   try {
@@ -237,6 +340,12 @@ export default {
   getMoviesWithGenreFrenchAndItalian,
   getMoviesWithGenreAndIMDBScore,
   getMoviesWith4Actors,
+  getMoviesStats,
+  getMoviesCastTotal,
+  getMoviesOnlyCastTotal,
+  getMoviesHollywoodCount,
+  getMoviesBetween2000And2010With8IMDBAnd10Awards,
+  get5BestMoviesWith4ActorsAnd15AwardsAndIMDBScore,
   create,
   findAll,
   findOne,
